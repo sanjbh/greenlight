@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"greenlight.sanjbh.net/internal/data"
 	"greenlight.sanjbh.net/internal/formatter"
@@ -18,9 +19,18 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		http.NotFound(w, r)
 	}
 
-	movie := data.Movie {
-		ID: id,
-		CreatedAt: ,
+	movie := data.Movie{
+		ID:        id,
+		CreatedAt: time.Now(),
+		Title:     "Casablanca",
+		Runtime:   102,
+		Genres:    []string{"drama", "romance", "war"},
+		Version:   1,
+	}
+
+	if err = app.writeJSON(w, http.StatusOK, movie, nil); err != nil {
+		app.logger.Println(err)
+		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
 	}
 
 	formatter.FprintF(w, "show the details of movie %d\n", id)
