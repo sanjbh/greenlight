@@ -6,12 +6,19 @@ import (
 
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
-	data := map[string]string{
+	env := envelope{
+		"status": "available",
+		"system_info": map[string]string{
+			"environment": app.config.env,
+			"version":     version,
+		},
+	}
+	/* data := map[string]string{
 		"status":      "available",
 		"environment": app.config.env,
 		"version":     version,
 	}
-
+	*/
 	/* js, err := json.Marshal(data)
 	if err != nil {
 		app.logger.Println(err)
@@ -30,7 +37,7 @@ func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Reques
 
 	w.Write([]byte(js)) */
 
-	if err := app.writeJSON(w, http.StatusOK, data, nil); err != nil {
+	if err := app.writeJSON(w, http.StatusOK, env, nil); err != nil {
 		app.logger.Println(err)
 		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
 	}
