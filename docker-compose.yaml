@@ -94,6 +94,8 @@ services:
       - ./vault/init:/vault/init
       - vault-logs:/vault/logs
       - ./vault/tls:/vault/tls
+      - ./.env:/vault/.env
+
     entrypoint: /bin/sh
     command: -c "apk add --no-cache jq && /vault/init/init.sh"
     restart: "no"

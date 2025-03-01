@@ -20,8 +20,12 @@ UNSEAL_KEY=$(echo "$INIT_OUTPUT" | grep "Unseal Key 1" | awk '{print $NF}')
 ROOT_TOKEN=$(echo "$INIT_OUTPUT" | grep "Initial Root Token" | awk '{print $NF}')
 
 # Save keys to file
-echo "Unseal Key: $UNSEAL_KEY" > /vault/init/vault-keys.txt
-echo "Root Token: $ROOT_TOKEN" >> /vault/init/vault-keys.txt
+#echo "Unseal Key: $UNSEAL_KEY" > /vault/init/vault-keys.txt
+#echo "Root Token: $ROOT_TOKEN" >> /vault/init/vault-keys.txt
+
+
+echo "UNSEAL_KEY=$UNSEAL_KEY" > /vault/.env
+echo "ROOT_TOKEN=$ROOT_TOKEN" >> /vault/.env
 
 # Unseal Vault
 echo "Unsealing Vault with key: $UNSEAL_KEY"

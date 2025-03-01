@@ -3,7 +3,9 @@ package vaultdata
 import (
 	"crypto/tls"
 	"errors"
+	"log"
 	"net/http"
+	"os"
 
 	vault "github.com/hashicorp/vault/api"
 )
@@ -30,6 +32,14 @@ func GetDataFromVault(address string) (*DbData, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	token, ok := os.LookupEnv("ROOT_TOKEN")
+
+	if !ok {
+		log.Fatalf("Unable to read vault token: %v\n", token)
+	}
+
+	client.SetToken(token)
 
 	secret, err := client.Logical().Read("secret/data/greenlight/dbconfig")
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"greenlight.sanjbh.net/internal/data"
 	"greenlight.sanjbh.net/internal/vaultdata"
@@ -32,6 +33,12 @@ type application struct {
 	config config
 	logger *log.Logger
 	models data.Models
+}
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file. %v\n", err)
+	}
 }
 
 func main() {
