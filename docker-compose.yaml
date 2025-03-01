@@ -1,0 +1,119 @@
+version: "3.8"
+services:
+  cert-gen:
+    image: alpine:latest
+    container_name: vault-cert-gen
+    volumes:
+      - ./vault/tls:/vault/tls
+    command: >
+      sh -c "
+        apk add --no-cache openssl &&
+        mkdir -p /vault/tls &&
+        # Generate CA key
+        openssl genrsa -out /vault/tls/ca.key 2048 &&
+        # Generate CA certificate
+        openssl req -x509 -new -nodes -key /vault/tls/ca.key -sha256 -days 1825 -out /vault/tls/ca.crt -subj '/C=US/ST=State/L=City/O=Organization/CN=Vault CA' &&
+        
+        # Generate server private key
+        openssl genrsa -out /vault/tls/vault.key 2048 &&
+        
+        # Create CSR config
+        echo '[req]
+        default_bits = 2048
+        prompt = no
+        default_md = sha256
+        req_extensions = req_ext
+        distinguished_name = dn
+        
+        [dn]
+        C = US
+        ST = State
+        L = City
+        O = Organization
+        CN = vault.local
+        
+        [req_ext]
+        subjectAltName = @alt_names
+        
+        [alt_names]
+        DNS.1 = vault
+        DNS.2 = vault.local
+        DNS.3 = localhost
+        DNS.4 = vault-greenlight
+        IP.1 = 127.0.0.1' > /vault/tls/vault.cnf &&
+        
+        # Generate CSR
+        openssl req -new -key /vault/tls/vault.key -out /vault/tls/vault.csr -config /vault/tls/vault.cnf &&
+        
+        # Generate server certificate
+        openssl x509 -req -in /vault/tls/vault.csr -CA /vault/tls/ca.crt -CAkey /vault/tls/ca.key -CAcreateserial -out /vault/tls/vault.crt -days 825 -sha256 -extfile /vault/tls/vault.cnf -extensions req_ext &&
+        
+        # Set permissions
+        chmod 644 /vault/tls/ca.crt /vault/tls/vault.crt &&
+        chmod 600 /vault/tls/ca.key /vault/tls/vault.key &&
+        
+        echo 'TLS certificates generated successfully!'
+      "
+    restart: "no"
+
+  vault:
+    image: hashicorp/vault
+    container_name: vault-greenlight
+    depends_on:
+      - cert-gen
+    environment:
+      VAULT_ADDR: "https://vault-greenlight:8200"
+      VAULT_API_ADDR: "https://vault-greenlight:8200"
+      VAULT_ADDRESS: "https://vault-greenlight:8200"
+      VAULT_UI: true
+      VAULT_SKIP_VERIFY: true
+      # VAULT_TOKEN:
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    restart: always
+    volumes:
+      - vault-logs:/vault/logs/:rw
+      - vault-data:/vault/data/:rw
+      - ./vault/config:/vault/config/:rw
+      - vault-file:/vault/file/:rw
+      - ./vault/tls:/vault/tls
+    cap_add:
+      - IPC_LOCK
+    entrypoint: vault server -config /vault/config/vault.hcl
+
+  vault-init:
+    image: hashicorp/vault:latest
+    container_name: vault-init
+    depends_on:
+      - vault
+    environment:
+      - VAULT_ADDR=https://vault-greenlight:8200
+      - VAULT_SKIP_VERIFY=true
+    volumes:
+      - ./vault/init:/vault/init
+      - vault-logs:/vault/logs
+      - ./vault/tls:/vault/tls
+    entrypoint: /bin/sh
+    command: -c "apk add --no-cache jq && /vault/init/init.sh"
+    restart: "no"
+
+  postgres:
+    image: postgres:latest
+    container_name: greenlight-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: greenlight
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts:/docker-entrypoint-initdb.d
+
+volumes:
+  vault-data:
+  vault-logs:
+  vault-file:
+  postgres-data:
