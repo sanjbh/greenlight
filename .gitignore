@@ -1,1 +1,3 @@
 vault/init/vault-keys.txt
+.env
+vault/tls/*
